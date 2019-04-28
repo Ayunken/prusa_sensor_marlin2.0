@@ -1,3 +1,4 @@
+// ONLY KEY PARAMETERS TO ENABLE/CONFIGURE. THIS IS NOT A COMPLETE CONFIGURATION.H FILE FOR MARLIN 
 /**
  * Filament Runout Sensors
  * Mechanical or opto endstops are used to check for the presence of filament.
