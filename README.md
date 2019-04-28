@@ -1,5 +1,9 @@
-Implementacion del sensor de movimiento de filamento de Prusa, el PAT9125, en Marlin 2.0.
-Hace unos meses adquiri un modulo PAT9125 pensando en poder incorporar el novedoso sensor de movimiento de filamento de la Prusa en mi P3Steel.
-Me descargue 
-Ahora Marlin 2.0 incorpora una nueva caracteristica mediante la cual se puede controlar los atascos de filamento por falta o porque se ha atascado y deja de entrar filamento.
-Se me ocurrio pues usar un modulo Attiny85
+Implementación del sensor de movimiento de filamento de Prusa, el PAT9125, en Marlin 2.0.
+Hace unos meses adquirí un modulo PAT9125 pensando en poder incorporar este novedoso sensor láser de la Prusa en mi P3Steel donde usaba Marlin 1.1.9.
+Estuve revisando el códgio del firmware de prusa y no conozco tanto Marlin como para incorporar directamente el sensor usando las librerías del de Prusa, más usando I2C como protocolo, que es el que usa este módulo (SDA/SCL) 
+Pero después descurrí que Marlin 2.0 (aunque en la versión alpha) incorpora una nueva característica mediante la cual se puede controlar los atascos de filamento por falta o porque se ha atascado y deja de entrar filamento, mediante un encoder.
+Se me ocurrio pues usar un modulo Attiny85 que hiciera de interfaz entre el sensor y mi electrónica RAMPS1.4+Mega2560 correindo Marlin 2.0
+El Attiny85 recibe los datos del movimiento del sensor (valor y) mediante I2C, y siempre que ve cambios en el valor y, envía pulsos (HIGH/LOW) que hacia al pin de deteccion de filamento (normalmente el puerto D4). Además como el módulo Attiny tiene un led 'bultin' que se activa mediante la salida 1, tambén lo enciendo a la vez que el pulso de encoder, lo que sirve de monitor
+Encontré en thingiverse un soporte para el sensor de Prusa https://www.thingiverse.com/thing:3387643, bastante elegante y mínimo, por lo que opté por usarlo y dejar el módulo Attiny separado en otra cajita, que coloqué encima de la caja de la electrónica,  dejando un orificio para el que se viera el led. 
+Sin embargo el soporte tuve que modificarlo porque el filamente pasaba demasiado cerca del láser, prácticamente tocando, y no detectaba bien, y rehice el soporte para que el filamente pasara a 2 milímetros del láser, con lo que detectaba perfectamente. He probado con filamento negro, blanco y rojo y funcionam perfectamente. No tengo transparente, así que no sé si con estos funcionará.
+
