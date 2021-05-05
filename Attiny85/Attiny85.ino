@@ -8,100 +8,104 @@
   establecer trgtime con el valor en ms de la duración del pulso 
 **/
 
-
 #include "pat9125.h"
-/*
-void printSerial(const char *fmt, ...)
-{
-  char tmp[100];
-  va_list args;
-// Obtenemos la lista de argumentos
-  va_start (args, fmt );
-  // Escribimos en tmp, con tamaÃƒÂ±o MAX_CADENA, la cadena de formato serÃƒÂ¡ fmt y los
-  // argumentos args
-  vsnprintf(tmp, 100, fmt, args);
-  va_end (args);
-  Serial.print(tmp);
- 
-}*/
 
 #define MCU_AT85  //ATTINY 85
 //#define MCU_AUNO //MICRO/UNO
 
+// ATTINY85
 #ifdef MCU_AT85
- int led=1; // builtin led
- int out=3; // output to printer board as encoder
+  #define SWI2C_SDA         0 //SDA on P1
+  #define SWI2C_SCL         2 //SCL on P3
+  #define LEDPIN            1 // led
+  #define OUTPIN            3 // output to printer board as encoder
 #endif
-#ifdef MCU_AUNO
-  // UNO
-  int led=13; // builtin led
-  int out=4; // output to printer board as encoder
-#endif*/
+
+#ifdef MCU_AUNO 
+//ARDUINO UNO
+  #define SWI2C_SDA         2 //SDA 
+  #define SWI2C_SCL         3 //SCL 
+  #define LEDPIN            13 //led
+  #define OUTPIN            4 // output to printer board as encoder
+#endif
+
+
+
 
 long yy=0; // last y value
 int ydelta=1; // relativo change in y to trigger
 int trgtime=100; // ms duration pulse 
-//boolean state; // save last output state
+cPAT9125 pat9125(SWI2C_SDA, SWI2C_SCL);
 
-void trigger_pin(){
-    #ifdef MCU_AUNO
-      Serial.println("TRIGGER");
-    #endif  
-    digitalWrite(led,HIGH);
-    digitalWrite(out,HIGH);
-    delay(trgtime);
-    digitalWrite(led,LOW);
-    digitalWrite(out,LOW);
-    delay(100);
-    
-}
+void trigger_pin();
 
-/*
-/void swap_pin(){
-    state=!state;
-    digitalWrite(led,state?HIGH:LOW);
-    digitalWrite(out,state?HIGH:LOW);
-}
-*/
-void setup(){ //Marlin_main.cpp
+
+void setup()
+{ //Marlin_main.cpp
     #ifdef MCU_AUNO
-        Serial.begin(9600);  
+        Serial.begin(115200);  
     #endif    
     //fsensor_autoload_set(true);
     
-    pinMode(led,OUTPUT);
-    pinMode(out,OUTPUT);
-    digitalWrite(led,HIGH);
+    pinMode(LEDPIN,OUTPUT);
+    pinMode(OUTPIN,OUTPUT);
+    digitalWrite(LEDPIN,HIGH);
     
-    uint8_t pat9125 = pat9125_init();
     
-    for (int i=0;i<2;i++){
-    digitalWrite(led,HIGH);
-    delay(100);  
-    digitalWrite(led,LOW);
-    delay(100);  
+    
+    for (int i=0;i<2;i++)
+    {
+      digitalWrite(LEDPIN,HIGH);
+      delay(100);  
+      digitalWrite(LEDPIN,LOW);
+      delay(100);  
     }
-     
-    //Serial.print("PAT9125_init:");
+
+    #ifdef MCU_AUNO
+      if (pat9125.IsInit())
+      {
+        Serial.println("PAT9125 initialization complite");
+        
+      }
+      else
+      {
+          Serial.println("PAT9125 Not init");
+      }
+    #endif
     //Serial.println(pat9125);
     
 }
 
 void loop(){
      
-     pat9125_update(); //update sensor
+     pat9125.update(); //update sensor
      
-     if (abs(pat9125_y-yy)>ydelta) 
-       {
-        #if MCU_AUNO
-        Serial.println("x"+String( yy)+" y:" + String( pat9125_y));
+     if (abs(pat9125.y-yy)>ydelta) 
+      {
+        #ifdef MCU_AUNO
+        Serial.println("x"+String( yy)+" y:" + String( pat9125.y));
         #endif
-        yy=pat9125_y;
-        trigger_pin();}
+        yy=pat9125.y;
+        trigger_pin();
+      }
      //if (pat9125_y==yy and state==1)
      //     swap_pin();      
      
      //delay(100);
+}
+
+void trigger_pin()
+{
+    #ifdef MCU_AUNO
+      Serial.println("TRIGGER");
+    #endif  
+    digitalWrite(LEDPIN,HIGH);
+    digitalWrite(OUTPIN,HIGH);
+    delay(trgtime);
+    digitalWrite(LEDPIN,LOW);
+    digitalWrite(OUTPIN,LOW);
+    delay(100);
+    
 }
     
 /*

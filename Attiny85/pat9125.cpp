@@ -3,60 +3,80 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include <stdio.h>
-#include "SWI2C.h"
 #include "Arduino.h"
 
 
-// ATTINY85
-#ifdef MCU_AT85
-  #define SWI2C_SDA         0 //SDA on P1
-  #define SWI2C_SCL         2 //SCL on P3
-#endif
-#ifdef MCU_AUNO 
-//ARDUINO UNO
-  #define SWI2C_SDA         2 //SDA 
-  #define SWI2C_SCL         3 //SCL 
-#endif
+cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl):swi2c(sda, scl, PAT9125_I2C_ADDR)
+{
+	swi2c.begin();
+  // Verify that the sensor responds with its correct product ID.
+	PID1 = rd_reg(PAT9125_PID1);
+	PID2 = rd_reg(PAT9125_PID2);
+	if (!IsInit())
+	{
+		PID1 = rd_reg(PAT9125_PID1);
+		PID2 = rd_reg(PAT9125_PID2);
+	}
+
+#ifdef PAT9125_NEW_INIT
+	// Switch to bank0, not allowed to perform OTS_RegWriteRead.
+	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0);
+	// Software reset (i.e. set bit7 to 1). It will reset to 0 automatically.
+	// After the reset, OTS_RegWriteRead is not allowed.
+	pat9125_wr_reg(PAT9125_CONFIG, 0x97);
+	// Wait until the sensor reboots.
+	// Delay 1ms.
+	_delay_us(1000);
+	{
+		const uint8_t *ptr = pat9125_init_seq1;
+		for (;;) {
+			const uint8_t addr = pgm_read_byte_near(ptr ++);
+			if (addr == 0x0ff)
+				break;
+			if (! pat9125_wr_reg_verify(addr, pgm_read_byte_near(ptr ++)))
+				// Verification of the register write failed.
+				return 0;
+		}
+	}
+	// Delay 10ms.
+	_delay_ms(10);
+	// Switch to bank1, not allowed to perform OTS_RegWrite.
+	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0x01);
+	{
+		const uint8_t *ptr = pat9125_init_seq2;
+		for (;;) {
+			const uint8_t addr = pgm_read_byte_near(ptr ++);
+			if (addr == 0x0ff)
+				break;
+			if (! pat9125_wr_reg_verify(addr, pgm_read_byte_near(ptr ++)))
+				// Verification of the register write failed.
+				return 0;
+		}
+	}
+	// Switch to bank0, not allowed to perform OTS_RegWriteRead.
+	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0x00);
+	// Enable write protect.
+	pat9125_wr_reg(PAT9125_WP, 0x00);
+
+	pat9125_PID1 = pat9125_rd_reg(PAT9125_PID1);
+	pat9125_PID2 = pat9125_rd_reg(PAT9125_PID2);
+#endif //PAT9125_NEW_INIT
+
+	wr_reg(PAT9125_RES_X, PAT9125_XRES);
+	wr_reg(PAT9125_RES_Y, PAT9125_YRES);
+	//fprintf_P(uartout, PSTR("PAT9125_RES_X=%hhu\n"), pat9125_rd_reg(PAT9125_RES_X));
+	//fprintf_P(uartout, PSTR("PAT9125_RES_Y=%hhu\n"), pat9125_rd_reg(PAT9125_RES_Y));
+
+}
+
+bool cPAT9125::IsInit()
+{
+	if ((PID1 == 0x31) && (PID2 == 0x91)) return true;
+	else false;
+}
 
 
 
-//PAT9125 configuration
-#define PAT9125_I2C_ADDR  0x75  //ID=LO
-//#define PAT9125_I2C_ADDR  0x79  //ID=HI
-//#define PAT9125_I2C_ADDR  0x73  //ID=NC
-
-#define PAT9125_XRES      0
-#define PAT9125_YRES      240
-
-//PAT9125 registers
-#define PAT9125_PID1			0x00
-#define PAT9125_PID2			0x01
-#define PAT9125_MOTION			0x02
-#define PAT9125_DELTA_XL		0x03
-#define PAT9125_DELTA_YL		0x04
-#define PAT9125_MODE			0x05
-#define PAT9125_CONFIG			0x06
-#define PAT9125_WP				0x09
-#define PAT9125_SLEEP1			0x0a
-#define PAT9125_SLEEP2			0x0b
-#define PAT9125_RES_X			0x0d
-#define PAT9125_RES_Y			0x0e
-#define PAT9125_DELTA_XYH		0x12
-#define PAT9125_SHUTTER			0x14
-#define PAT9125_FRAME			0x17
-#define PAT9125_ORIENTATION		0x19
-#define PAT9125_BANK_SELECTION	0x7f
-//#include <TinyPinChange.h> 
-
-SWI2C swi2c = SWI2C(SWI2C_SDA, SWI2C_SCL, PAT9125_I2C_ADDR);
-
-
-uint8_t pat9125_PID1 = 0;
-uint8_t pat9125_PID2 = 0;
-int16_t pat9125_x = 0;
-int16_t pat9125_y = 0;
-uint8_t pat9125_b = 0;
-uint8_t pat9125_s = 0;
 
 
 // Init sequence, address & value.
@@ -112,149 +132,89 @@ const PROGMEM uint8_t pat9125_init_seq2[] = {
 };
 
 
-uint8_t pat9125_rd_reg(uint8_t addr);
-void pat9125_wr_reg(uint8_t addr, uint8_t data);
-uint8_t pat9125_wr_reg_verify(uint8_t addr, uint8_t data);
-
-extern FILE _uartout;
-#define uartout (&_uartout)
 
 
-uint8_t pat9125_init()
+
+void cPAT9125::update()
 {
-	swi2c.begin();
-  // Verify that the sensor responds with its correct product ID.
-	pat9125_PID1 = pat9125_rd_reg(PAT9125_PID1);
-	pat9125_PID2 = pat9125_rd_reg(PAT9125_PID2);
-	if ((pat9125_PID1 != 0x31) || (pat9125_PID2 != 0x91))
+	if (IsInit())
 	{
-		pat9125_PID1 = pat9125_rd_reg(PAT9125_PID1);
-		pat9125_PID2 = pat9125_rd_reg(PAT9125_PID2);
-		if ((pat9125_PID1 != 0x31) || (pat9125_PID2 != 0x91))
-			return 0;
-	}
+		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
+		b = rd_reg(PAT9125_FRAME);
+		s = rd_reg(PAT9125_SHUTTER);
 
-#ifdef PAT9125_NEW_INIT
-	// Switch to bank0, not allowed to perform OTS_RegWriteRead.
-	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0);
-	// Software reset (i.e. set bit7 to 1). It will reset to 0 automatically.
-	// After the reset, OTS_RegWriteRead is not allowed.
-	pat9125_wr_reg(PAT9125_CONFIG, 0x97);
-	// Wait until the sensor reboots.
-	// Delay 1ms.
-	_delay_us(1000);
-	{
-		const uint8_t *ptr = pat9125_init_seq1;
-		for (;;) {
-			const uint8_t addr = pgm_read_byte_near(ptr ++);
-			if (addr == 0x0ff)
-				break;
-			if (! pat9125_wr_reg_verify(addr, pgm_read_byte_near(ptr ++)))
-				// Verification of the register write failed.
-				return 0;
-		}
-	}
-	// Delay 10ms.
-	_delay_ms(10);
-	// Switch to bank1, not allowed to perform OTS_RegWrite.
-	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0x01);
-	{
-		const uint8_t *ptr = pat9125_init_seq2;
-		for (;;) {
-			const uint8_t addr = pgm_read_byte_near(ptr ++);
-			if (addr == 0x0ff)
-				break;
-			if (! pat9125_wr_reg_verify(addr, pgm_read_byte_near(ptr ++)))
-				// Verification of the register write failed.
-				return 0;
-		}
-	}
-	// Switch to bank0, not allowed to perform OTS_RegWriteRead.
-	pat9125_wr_reg(PAT9125_BANK_SELECTION, 0x00);
-	// Enable write protect.
-	pat9125_wr_reg(PAT9125_WP, 0x00);
+		if (PID1 == 0xff) return;
 
-	pat9125_PID1 = pat9125_rd_reg(PAT9125_PID1);
-	pat9125_PID2 = pat9125_rd_reg(PAT9125_PID2);
-#endif //PAT9125_NEW_INIT
-
-	pat9125_wr_reg(PAT9125_RES_X, PAT9125_XRES);
-	pat9125_wr_reg(PAT9125_RES_Y, PAT9125_YRES);
-	//fprintf_P(uartout, PSTR("PAT9125_RES_X=%hhu\n"), pat9125_rd_reg(PAT9125_RES_X));
-	//fprintf_P(uartout, PSTR("PAT9125_RES_Y=%hhu\n"), pat9125_rd_reg(PAT9125_RES_Y));
-	return 1;
-}
-
-uint8_t pat9125_update(void)
-{
-	if ((pat9125_PID1 == 0x31) && (pat9125_PID2 == 0x91))
-	{
-		uint8_t ucMotion = pat9125_rd_reg(PAT9125_MOTION);
-		pat9125_b = pat9125_rd_reg(PAT9125_FRAME);
-		pat9125_s = pat9125_rd_reg(PAT9125_SHUTTER);
-		if (pat9125_PID1 == 0xff) return 0;
 		if (ucMotion & 0x80)
 		{
-			uint8_t ucXL = pat9125_rd_reg(PAT9125_DELTA_XL);
-			uint8_t ucYL = pat9125_rd_reg(PAT9125_DELTA_YL);
-			uint8_t ucXYH = pat9125_rd_reg(PAT9125_DELTA_XYH);
-			if (pat9125_PID1 == 0xff) return 0;
+			uint8_t ucXL = rd_reg(PAT9125_DELTA_XL);
+			uint8_t ucYL = rd_reg(PAT9125_DELTA_YL);
+			uint8_t ucXYH = rd_reg(PAT9125_DELTA_XYH);
+
+			if (PID1 == 0xff) return;
+
 			int16_t iDX = ucXL | ((ucXYH << 4) & 0xf00);
 			int16_t iDY = ucYL | ((ucXYH << 8) & 0xf00);
+
 			if (iDX & 0x800) iDX -= 4096;
 			if (iDY & 0x800) iDY -= 4096;
-			pat9125_x += iDX;
-			pat9125_y -= iDY; //negative number, because direction switching does not work
+
+			x += iDX;
+			y -= iDY; //negative number, because direction switching does not work
 		}
-		return 1;
+		
 	}
-	return 0;
+	
 }
 
-uint8_t pat9125_update_y(void)
+void cPAT9125::update_y()
 {
-	if ((pat9125_PID1 == 0x31) && (pat9125_PID2 == 0x91))
+	if (IsInit())
 	{
-		uint8_t ucMotion = pat9125_rd_reg(PAT9125_MOTION);
-		if (pat9125_PID1 == 0xff) return 0;
+		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
+		if (PID1 == 0xff) return;
 		if (ucMotion & 0x80)
 		{
-			uint8_t ucYL = pat9125_rd_reg(PAT9125_DELTA_YL);
-			uint8_t ucXYH = pat9125_rd_reg(PAT9125_DELTA_XYH);
-			if (pat9125_PID1 == 0xff) return 0;
+			uint8_t ucYL = rd_reg(PAT9125_DELTA_YL);
+			uint8_t ucXYH = rd_reg(PAT9125_DELTA_XYH);
+
+			if (PID1 == 0xff) return;
+
 			int16_t iDY = ucYL | ((ucXYH << 8) & 0xf00);
 			if (iDY & 0x800) iDY -= 4096;
-			pat9125_y -= iDY; //negative number, because direction switching does not work
+			y -= iDY; //negative number, because direction switching does not work
 		}
-		return 1;
 	}
-	return 0;
 }
 
-uint8_t pat9125_update_y2(void)
+void cPAT9125::update_y2()
 {
-	if ((pat9125_PID1 == 0x31) && (pat9125_PID2 == 0x91))
+	if (IsInit())
 	{
-		uint8_t ucMotion = pat9125_rd_reg(PAT9125_MOTION);
-		if (pat9125_PID1 == 0xff) return 0; //NOACK error
+		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
+
+		if (PID1 == 0xff) return; //NOACK error
+
 		if (ucMotion & 0x80)
 		{
-			int8_t dy = pat9125_rd_reg(PAT9125_DELTA_YL);
-			if (pat9125_PID1 == 0xff) return 0; //NOACK error
-			pat9125_y -= dy; //negative number, because direction switching does not work
+			int8_t dy = rd_reg(PAT9125_DELTA_YL);
+
+			if (PID1 == 0xff) return; //NOACK error
+
+			y -= dy; //negative number, because direction switching does not work
 		}
-		return 1;
+		
 	}
-	return 0;
+	
 }
 
-uint8_t pat9125_rd_reg(uint8_t addr)
+uint8_t cPAT9125::rd_reg(uint8_t addr)
 {
 	uint8_t data = 0;
   if (!swi2c.read1bFromRegister(addr,&data))
   {
-    pat9125_PID1 = 0xff;
-    pat9125_PID2 = 0xff;
+    PID1 = 0xff;
+    PID2 = 0xff;
     return 0;
   }
 	/*
@@ -269,14 +229,14 @@ uint8_t pat9125_rd_reg(uint8_t addr)
   
 }
 
-void pat9125_wr_reg(uint8_t addr, uint8_t data)
+void cPAT9125::wr_reg(uint8_t addr, uint8_t data)
 {
-  if (!swi2c.writeToRegister(addr,data))
-  {
-    pat9125_PID1 = 0xff;
-    pat9125_PID2 = 0xff;
-    return;
-    }
+	if (!swi2c.writeToRegister(addr,data))
+	{
+    	PID1 = 0xff;
+    	PID2 = 0xff;
+    	return;
+	}
    /*
 	if (!swi2c_writeByte_A8(PAT9125_I2C_ADDR, addr, &data)) //NO ACK error
 	{
@@ -287,8 +247,8 @@ void pat9125_wr_reg(uint8_t addr, uint8_t data)
 */
 }
 
-uint8_t pat9125_wr_reg_verify(uint8_t addr, uint8_t data)
+uint8_t cPAT9125::wr_reg_verify(uint8_t addr, uint8_t data)
 {
-	pat9125_wr_reg(addr, data);
-	return pat9125_rd_reg(addr) == data;
+	wr_reg(addr, data);
+	return rd_reg(addr) == data;
 }
