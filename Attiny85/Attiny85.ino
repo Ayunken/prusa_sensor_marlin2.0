@@ -18,7 +18,7 @@
   #define SWI2C_SDA         0 //SDA on P1
   #define SWI2C_SCL         2 //SCL on P3
   #define LEDPIN            1 // led
-  #define OUTPIN            3 // output to printer board as encoder
+  #define OUTPIN            5 // output to printer board as encoder
 #endif
 
 #ifdef MCU_AUNO 
