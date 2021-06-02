@@ -6,7 +6,7 @@
 #include "Arduino.h"
 
 
-cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl):swi2c(sda, scl, PAT9125_I2C_ADDR)
+cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl, uint8_t XRES, uint8_t YRES):swi2c(sda, scl, PAT9125_I2C_ADDR)
 {
 	swi2c.begin();
   // Verify that the sensor responds with its correct product ID.
@@ -17,6 +17,9 @@ cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl):swi2c(sda, scl, PAT9125_I2C_ADDR)
 		PID1 = rd_reg(PAT9125_PID1);
 		PID2 = rd_reg(PAT9125_PID2);
 	}
+
+	wr_reg(PAT9125_RES_X, XRES);
+	wr_reg(PAT9125_RES_Y, YRES);
 
 #ifdef PAT9125_NEW_INIT
 	// Switch to bank0, not allowed to perform OTS_RegWriteRead.
@@ -62,8 +65,7 @@ cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl):swi2c(sda, scl, PAT9125_I2C_ADDR)
 	pat9125_PID2 = pat9125_rd_reg(PAT9125_PID2);
 #endif //PAT9125_NEW_INIT
 
-	wr_reg(PAT9125_RES_X, PAT9125_XRES);
-	wr_reg(PAT9125_RES_Y, PAT9125_YRES);
+	
 	//fprintf_P(uartout, PSTR("PAT9125_RES_X=%hhu\n"), pat9125_rd_reg(PAT9125_RES_X));
 	//fprintf_P(uartout, PSTR("PAT9125_RES_Y=%hhu\n"), pat9125_rd_reg(PAT9125_RES_Y));
 
@@ -77,7 +79,7 @@ bool cPAT9125::IsInit()
 
 
 
-
+/*
 
 // Init sequence, address & value.
 const PROGMEM uint8_t pat9125_init_seq1[] = {
@@ -98,6 +100,7 @@ const PROGMEM uint8_t pat9125_init_seq1[] = {
     // stopper
     0x0ff
 };
+
 
 // Init sequence, address & value.
 const PROGMEM uint8_t pat9125_init_seq2[] = {
@@ -131,7 +134,7 @@ const PROGMEM uint8_t pat9125_init_seq2[] = {
     0x0ff
 };
 
-
+*/
 
 
 
@@ -159,7 +162,7 @@ void cPAT9125::update()
 			if (iDX & 0x800) iDX -= 4096;
 			if (iDY & 0x800) iDY -= 4096;
 
-			x += iDX;
+			x -= iDX;
 			y -= iDY; //negative number, because direction switching does not work
 		}
 		
@@ -187,25 +190,24 @@ void cPAT9125::update_y()
 	}
 }
 
-void cPAT9125::update_y2()
+void cPAT9125::update_x()
 {
 	if (IsInit())
 	{
 		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
-
-		if (PID1 == 0xff) return; //NOACK error
-
+		if (PID1 == 0xff) return;
 		if (ucMotion & 0x80)
 		{
-			int8_t dy = rd_reg(PAT9125_DELTA_YL);
+			uint8_t ucXL = rd_reg(PAT9125_DELTA_XL);
+			uint8_t ucXYH = rd_reg(PAT9125_DELTA_XYH);
 
-			if (PID1 == 0xff) return; //NOACK error
+			if (PID1 == 0xff) return;
 
-			y -= dy; //negative number, because direction switching does not work
+			int16_t iDX = ucXL | ((ucXYH << 4) & 0xf00);
+			if (iDX & 0x800) iDX -= 4096;
+			x -= iDX; //negative number, because direction switching does not work
 		}
-		
 	}
-	
 }
 
 uint8_t cPAT9125::rd_reg(uint8_t addr)

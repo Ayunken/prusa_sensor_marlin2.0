@@ -15,8 +15,8 @@
 
 // ATTINY85
 #ifdef MCU_AT85
-  #define SWI2C_SDA         0 //SDA on P1
-  #define SWI2C_SCL         2 //SCL on P3
+  #define SWI2C_SDA         0 //SDA on P0
+  #define SWI2C_SCL         2 //SCL on P2
   #define LEDPIN            1 // led
   #define OUTPIN            5 // output to printer board as encoder
 #endif
@@ -33,9 +33,9 @@
 
 
 long yy=0; // last y value
-int ydelta=1; // relativo change in y to trigger
+int ydelta=70; // relativo change in y to trigger
 int trgtime=100; // ms duration pulse 
-cPAT9125 pat9125(SWI2C_SDA, SWI2C_SCL);
+cPAT9125 pat9125(SWI2C_SDA, SWI2C_SCL, 240, 240);
 
 void trigger_pin();
 
@@ -76,16 +76,17 @@ void setup()
     
 }
 
-void loop(){
+void loop()
+{
      
-     pat9125.update(); //update sensor
+     pat9125.update_x(); //update sensor
      
-     if (abs(pat9125.y-yy)>ydelta) 
+     if (abs(pat9125.x-yy)>ydelta) 
       {
         #ifdef MCU_AUNO
         Serial.println("x"+String( yy)+" y:" + String( pat9125.y));
         #endif
-        yy=pat9125.y;
+        yy=pat9125.x;
         trigger_pin();
       }
      //if (pat9125_y==yy and state==1)

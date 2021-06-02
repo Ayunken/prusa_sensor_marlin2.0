@@ -6,8 +6,7 @@
 //#define PAT9125_I2C_ADDR  0x79  //ID=HI
 //#define PAT9125_I2C_ADDR  0x73  //ID=NC
 
-#define PAT9125_XRES      0
-#define PAT9125_YRES      240
+
 
 //PAT9125 registers
 #define PAT9125_PID1			0x00
@@ -35,11 +34,11 @@ class cPAT9125
 {
     public:
 
-    cPAT9125(uint8_t sda, uint8_t scl);
+    cPAT9125(uint8_t sda, uint8_t scl, uint8_t XRES, uint8_t YRES);
 
     void update();
     void update_y();
-    void update_y2();
+    void update_x();
     bool IsInit();
 
     private:
