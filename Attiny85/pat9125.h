@@ -36,21 +36,16 @@ class cPAT9125
 
     cPAT9125(uint8_t sda, uint8_t scl, uint8_t XRES, uint8_t YRES);
 
-    void update();
-    void update_y();
-    void update_x();
+    int16_t Get_delta_y();
+    int16_t Get_delta_x();
+    uint8_t Get_b();
+    uint8_t Get_s();
     bool IsInit();
 
     private:
     uint8_t rd_reg(uint8_t addr);
     void wr_reg(uint8_t addr, uint8_t data);
     uint8_t wr_reg_verify(uint8_t addr, uint8_t data);
-
-    public:
-    int16_t x = 0;
-    int16_t y = 0;
-    uint8_t b = 0;
-    uint8_t s = 0;
 
     private:
     uint8_t PID1 = 0;

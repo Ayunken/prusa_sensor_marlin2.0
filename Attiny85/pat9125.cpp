@@ -137,7 +137,7 @@ const PROGMEM uint8_t pat9125_init_seq2[] = {
 */
 
 
-
+/*
 void cPAT9125::update()
 {
 	if (IsInit())
@@ -169,45 +169,65 @@ void cPAT9125::update()
 	}
 	
 }
-
-void cPAT9125::update_y()
+*/
+int16_t cPAT9125::Get_delta_y()
 {
 	if (IsInit())
 	{
 		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
-		if (PID1 == 0xff) return;
-		if (ucMotion & 0x80)
+
+		if (PID1 != 0xff && ucMotion & 0x80)
 		{
 			uint8_t ucYL = rd_reg(PAT9125_DELTA_YL);
 			uint8_t ucXYH = rd_reg(PAT9125_DELTA_XYH);
 
-			if (PID1 == 0xff) return;
-
-			int16_t iDY = ucYL | ((ucXYH << 8) & 0xf00);
-			if (iDY & 0x800) iDY -= 4096;
-			y -= iDY; //negative number, because direction switching does not work
+			if (PID1 != 0xff)
+			{
+				int16_t iDY = ucYL | ((ucXYH << 8) & 0xf00);
+				if (iDY & 0x800) iDY -= 4096;
+				return iDY; 
+			}
 		}
 	}
+
+	return 0;
 }
 
-void cPAT9125::update_x()
+int16_t cPAT9125::Get_delta_x()
 {
 	if (IsInit())
 	{
 		uint8_t ucMotion = rd_reg(PAT9125_MOTION);
-		if (PID1 == 0xff) return;
-		if (ucMotion & 0x80)
+		
+		if (PID1 != 0xff && ucMotion & 0x80)
 		{
 			uint8_t ucXL = rd_reg(PAT9125_DELTA_XL);
 			uint8_t ucXYH = rd_reg(PAT9125_DELTA_XYH);
 
-			if (PID1 == 0xff) return;
-
-			int16_t iDX = ucXL | ((ucXYH << 4) & 0xf00);
-			if (iDX & 0x800) iDX -= 4096;
-			x -= iDX; //negative number, because direction switching does not work
+			if (PID1 != 0xff)
+			{
+				int16_t iDX = ucXL | ((ucXYH << 4) & 0xf00);
+				if (iDX & 0x800) iDX -= 4096;
+				return iDX; //negative number, because direction switching does not work
+			}
+			
 		}
 	}
+
+	return 0;
+}
+
+uint8_t cPAT9125::Get_b()
+{
+	if (IsInit()) return rd_reg(PAT9125_FRAME);
+	else return 0;	
+		
+}
+
+uint8_t cPAT9125::Get_s()
+{
+	if (IsInit()) return rd_reg(PAT9125_SHUTTER);
+	else return 0;
 }
 
 uint8_t cPAT9125::rd_reg(uint8_t addr)

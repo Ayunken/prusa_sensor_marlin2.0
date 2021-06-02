@@ -32,9 +32,10 @@
 
 
 
-long yy=0; // last y value
-int ydelta=70; // relativo change in y to trigger
-int trgtime=100; // ms duration pulse 
+int16_t Delta_X=0; // Current delta y
+int16_t Threshold=70; // relativo change in y to trigger
+int16_t trgtime=100; // ms duration pulse 
+
 cPAT9125 pat9125(SWI2C_SDA, SWI2C_SCL, 240, 240);
 
 void trigger_pin();
@@ -79,14 +80,14 @@ void setup()
 void loop()
 {
      
-     pat9125.update_x(); //update sensor
+     Delta_X+=pat9125.Get_delta_x(); 
      
-     if (abs(pat9125.x-yy)>ydelta) 
+     if (abs(Delta_X)>Threshold) 
       {
         #ifdef MCU_AUNO
-        Serial.println("x"+String( yy)+" y:" + String( pat9125.y));
+        Serial.println("x"+String( yy)+" y:" + String( Delta_X));
         #endif
-        yy=pat9125.x;
+        Delta_X=0;
         trigger_pin();
       }
      //if (pat9125_y==yy and state==1)
