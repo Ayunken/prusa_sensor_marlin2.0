@@ -8,3 +8,5 @@ In my case I use Pin P1 because Pin P5  not worked for me.
 [URL for shell]https://www.thingiverse.com/thing:4878669)
 
 [Another URL for shell not my]https://www.thingiverse.com/thing:3387643
+
+[Habrahabr.ru](https://habr.com/ru/users/deema35/posts/)
