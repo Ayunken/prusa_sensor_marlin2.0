@@ -18,7 +18,7 @@
   #define SWI2C_SDA         0 //SDA on P0
   #define SWI2C_SCL         2 //SCL on P2
   #define LEDPIN            1 // led
-  #define OUTPIN            5 // output to printer board as encoder
+  #define OUTPIN            5 // output to printer board as encoder (not worked for me)
 #endif
 
 #ifdef MCU_AUNO 
@@ -50,9 +50,8 @@ void setup()
     
     pinMode(LEDPIN,OUTPUT);
     pinMode(OUTPIN,OUTPUT);
-    digitalWrite(LEDPIN,HIGH);
-    
-    
+    digitalWrite(LEDPIN,LOW);
+    digitalWrite(OUTPIN,LOW);
     
     for (int i=0;i<2;i++)
     {
@@ -80,7 +79,7 @@ void setup()
 void loop()
 {
      
-     Delta_X+=pat9125.Get_delta_x(); 
+     Delta_X+=pat9125.Get_delta_x(); // Use Get_delta_y if you plase sensor with 90 degrees
      
      if (abs(Delta_X)>Threshold) 
       {
