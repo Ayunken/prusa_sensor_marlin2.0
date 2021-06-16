@@ -17,16 +17,15 @@
 #ifdef MCU_AT85
   #define SWI2C_SDA         0 //SDA on P0
   #define SWI2C_SCL         2 //SCL on P2
-  #define LEDPIN            1 // led
-  #define OUTPIN            5 // output to printer board as encoder (not worked for me)
+  #define LEDPIN            1 // led and output to printer board as encoder
+
 #endif
 
 #ifdef MCU_AUNO 
 //ARDUINO UNO
   #define SWI2C_SDA         2 //SDA 
   #define SWI2C_SCL         3 //SCL 
-  #define LEDPIN            13 //led
-  #define OUTPIN            4 // output to printer board as encoder
+  #define LEDPIN            13 //led and output to printer board as encoder
 #endif
 
 
@@ -49,9 +48,8 @@ void setup()
     //fsensor_autoload_set(true);
     
     pinMode(LEDPIN,OUTPUT);
-    pinMode(OUTPIN,OUTPUT);
     digitalWrite(LEDPIN,LOW);
-    digitalWrite(OUTPIN,LOW);
+  
     
     for (int i=0;i<2;i++)
     {
@@ -101,10 +99,8 @@ void trigger_pin()
       Serial.println("TRIGGER");
     #endif  
     digitalWrite(LEDPIN,HIGH);
-    digitalWrite(OUTPIN,HIGH);
     delay(trgtime);
     digitalWrite(LEDPIN,LOW);
-    digitalWrite(OUTPIN,LOW);
     delay(100);
     
 }
