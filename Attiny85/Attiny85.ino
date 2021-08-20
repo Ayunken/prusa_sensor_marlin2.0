@@ -28,12 +28,10 @@
   #define LEDPIN            13 //led and output to printer board as encoder
 #endif
 
-
-
+#define THRESHOLD 70  // THRESHOLD for pin trigering
+#define TRGTIME 100 // Pin trigrring duration in ms
 
 int16_t Delta_X=0; // Current delta y
-int16_t Threshold=70; // relativo change in y to trigger
-int16_t trgtime=100; // ms duration pulse 
 
 cPAT9125 pat9125(SWI2C_SDA, SWI2C_SCL, 240, 240);
 
@@ -79,10 +77,10 @@ void loop()
      
      Delta_X+=pat9125.Get_delta_x(); // Use Get_delta_y if you plase sensor with 90 degrees
      
-     if (abs(Delta_X)>Threshold) 
+     if (abs(Delta_X)>THRESHOLD) 
       {
         #ifdef MCU_AUNO
-        Serial.println("x"+String( yy)+" y:" + String( Delta_X));
+        Serial.println("Delta X: " + String( Delta_X));
         #endif
         Delta_X=0;
         trigger_pin();
@@ -99,7 +97,7 @@ void trigger_pin()
       Serial.println("TRIGGER");
     #endif  
     digitalWrite(LEDPIN,HIGH);
-    delay(trgtime);
+    delay(TRGTIME);
     digitalWrite(LEDPIN,LOW);
     delay(100);
     
