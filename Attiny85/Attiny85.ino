@@ -28,7 +28,7 @@
   #define LEDPIN            13 //led and output to printer board as encoder
 #endif
 
-#define THRESHOLD 12  // THRESHOLD for pin trigering
+#define THRESHOLD 24  // THRESHOLD for pin trigering
 #define TRGTIME 100 // Pin trigrring duration in ms
 
 int16_t Delta_X=0; // Current delta y
