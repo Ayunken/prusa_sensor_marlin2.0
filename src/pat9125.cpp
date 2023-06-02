@@ -74,7 +74,7 @@ cPAT9125::cPAT9125 (uint8_t sda, uint8_t scl, uint8_t XRES, uint8_t YRES):swi2c(
 bool cPAT9125::IsInit()
 {
 	if ((PID1 == 0x31) && (PID2 == 0x91)) return true;
-	else false;
+	else return false;
 }
 
 

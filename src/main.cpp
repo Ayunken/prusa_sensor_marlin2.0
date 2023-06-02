@@ -7,7 +7,7 @@
   pint out: 3
   establecer trgtime con el valor en ms de la duración del pulso 
 **/
-
+#include <Arduino.h>
 #include "pat9125.h"
 
 #define MCU_AT85  //ATTINY 85
@@ -75,7 +75,7 @@ void setup()
 void loop()
 {
      
-     Delta_X+=pat9125.Get_delta_x(); // Use Get_delta_y if you plase sensor with 90 degrees
+     Delta_X += pat9125.Get_delta_y(); // Use Get_delta_y if you plase sensor with 90 degrees
      
      if (abs(Delta_X)>THRESHOLD) 
       {
